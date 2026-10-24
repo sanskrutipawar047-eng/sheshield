@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Simulate Danger - SheShield</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<div class="container mt-4">
+    <div class="row g-4">
+
+        <!-- Left: signals -->
+        <div class="col-lg-7">
+            <div class="card p-4">
+                <h3><i class="bi bi-activity"></i> Simulate Danger</h3>
+                <p class="text-muted">Tap the signals the sensors detected. In Phase 2 these come from the phone automatically.</p>
+                <form th:action="@{/sos/trigger}" method="post">
+                    <label class="signal" data-weight="30">
+                        <input type="checkbox" name="scream"><i class="bi bi-megaphone-fill text-danger"></i>
+                        <span>Loud scream detected</span><span class="weight">+30</span></label>
+                    <label class="signal" data-weight="25">
+                        <input type="checkbox" name="jerk"><i class="bi bi-phone-vibrate-fill text-warning"></i>
+                        <span>Sudden jerk / fall / phone snatch</span><span class="weight">+25</span></label>
+                    <label class="signal" data-weight="20">
+                        <input type="checkbox" name="heartRate"><i class="bi bi-heart-pulse-fill" style="color:#ff6b9d"></i>
+                        <span>Heart-rate spike</span><span class="weight">+20</span></label>
+                    <label class="signal" data-weight="15">
+                        <input type="checkbox" name="isolated"><i class="bi bi-geo-alt-fill text-info"></i>
+                        <span>Isolated location</span><span class="weight">+15</span></label>
+                    <label class="signal" data-weight="10">
+                        <input type="checkbox" name="lateNight"><i class="bi bi-moon-stars-fill" style="color:#c4b5fd"></i>
+                        <span>Late night</span><span class="weight">+10</span></label>
+                    <button class="btn btn-danger w-100 py-2 mt-2"><i class="bi bi-lightning-charge-fill"></i> Calculate Danger Score</button>
+                </form>
+            </div>
+        </div>
+        <!-- Auto-detection card -->
+			<div class="card p-4 mt-3">
+				<h5>
+					<i class="bi bi-cpu-fill"></i> Auto-Detect (real sensors)
+				</h5>
+				<p class="text-muted mb-3">The phone or laptop detects the
+					signals itself, with no button press.</p>
+
+				<div class="d-flex flex-wrap gap-2 mb-3">
+					<button type="button" class="btn btn-dark" onclick="startMic()">
+						<i class="bi bi-mic-fill"></i> Start Microphone
+					</button>
+					<button type="button" class="btn btn-dark" onclick="startMotion()">
+						<i class="bi bi-phone-vibrate"></i> Enable Motion Sensor
+					</button>
+					<button type="button" class="btn btn-dark"
+						onclick="detectContext()">
+						<i class="bi bi-geo-alt"></i> Detect Time &amp; Location
+					</button>
+				</div>
+
+				<small class="text-muted">Sound level</small>
+				<div class="progress mb-2"
+					style="height: 10px; background: rgba(255, 255, 255, .15)">
+					<div class="progress-bar bg-danger" id="micBar" style="width: 0%"></div>
+				</div>
+				<small id="sensorStatus" class="text-muted">No sensor
+					started yet.</small>
+			</div>
+
+			<!-- Right: live gauge -->
+        <div class="col-lg-5">
+            <div class="card p-4 text-center lvl-LOW" id="gaugeCard">
+                <h5 class="mb-3">Live Danger Score</h5>
+                <div class="gauge">
+                    <svg width="200" height="200" viewBox="0 0 120 120">
+                        <circle class="gauge-bg" cx="60" cy="60" r="54"/>
+                        <circle class="gauge-fg" id="gaugeFg" cx="60" cy="60" r="54"/>
+                    </svg>
+                    <div class="gauge-text">
+                        <span class="num" id="scoreNum">0</span>
+                        <small class="text-muted">/ 100</small>
+                    </div>
+                </div>
+                <h5 class="mt-3" id="levelText">LOW</h5>
+                <p class="text-muted mb-0" id="levelHint">Only logged. No alert sent.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Live preview only. The real score is calculated again on the server.
+    const signals = document.querySelectorAll('.signal');
+    const circ = 339.3;
+
+    function update() {
+        let score = 0;
+        signals.forEach(s => {
+            const on = s.querySelector('input').checked;
+            s.classList.toggle('on', on);
+            if (on) score += Number(s.dataset.weight);
+        });
+
+        let level = 'LOW', hint = 'Only logged. No alert sent.';
+        if (score >= 70) { level = 'HIGH'; hint = '10-second countdown, then auto SOS.'; }
+        else if (score >= 40) { level = 'MEDIUM'; hint = '"Are you safe?" check before alerting.'; }
+
+        document.getElementById('scoreNum').textContent = score;
+        document.getElementById('gaugeFg').style.strokeDashoffset = circ - circ * score / 100;
+        document.getElementById('gaugeCard').className = 'card p-4 text-center lvl-' + level;
+        document.getElementById('levelText').textContent = level;
+        document.getElementById('levelHint').textContent = hint;
+    }
+    signals.forEach(s => s.querySelector('input').addEventListener('change', update));
+</script>
+	<script>
+    /** Ticks or unticks one signal checkbox and refreshes the live gauge. */
+    function setSignal(name, on) {
+        const box = document.querySelector('input[name="' + name + '"]');
+        if (box && box.checked !== on) {
+            box.checked = on;
+            box.dispatchEvent(new Event('change'));   // calls update() of the gauge
+        }
+    }
+    function status(text) { document.getElementById('sensorStatus').textContent = text; }
+
+    /** MICROPHONE: a loud sound (shout / scream / clap) ticks "scream". */
+    async function startMic() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 512;
+            ctx.createMediaStreamSource(stream).connect(analyser);
+            const data = new Uint8Array(analyser.fftSize);
+
+            setInterval(() => {
+                analyser.getByteTimeDomainData(data);
+                let sum = 0;
+                data.forEach(v => { const x = (v - 128) / 128; sum += x * x; });
+                const level = Math.sqrt(sum / data.length);          // loudness 0 to 1
+                document.getElementById('micBar').style.width = Math.min(level * 200, 100) + '%';
+                if (level > 0.3) setSignal('scream', true);          // TODO Phase 2: CNN on MFCC instead of a threshold
+            }, 100);
+            status('Microphone ON. Shout or clap loudly to trigger "scream".');
+        } catch (e) {
+            status('Microphone blocked. Allow it in the browser address bar.');
+        }
+    }
+
+    /** MOTION SENSOR (phones): a hard shake or snatch ticks "jerk". */
+    async function startMotion() {
+        if (!window.DeviceMotionEvent) { status('No motion sensor on this device. Use a phone.'); return; }
+        if (typeof DeviceMotionEvent.requestPermission === 'function') {   // iPhone asks permission
+            const answer = await DeviceMotionEvent.requestPermission();
+            if (answer !== 'granted') { status('Motion permission denied.'); return; }
+        }
+        window.addEventListener('devicemotion', e => {
+            const a = e.accelerationIncludingGravity;
+            if (!a) return;
+            const force = Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z);    // about 9.8 when still
+            if (force > 25) setSignal('jerk', true);
+        });
+        status('Motion sensor ON. Shake the phone hard to trigger "jerk".');
+    }
+
+    /** CLOCK + LOCATION: late night is decided from the time, location is read from GPS. */
+    function detectContext() {
+        const hour = new Date().getHours();
+        const night = hour >= 21 || hour < 5;
+        setSignal('lateNight', night);
+        let text = 'Time ' + hour + ':00 -> ' + (night ? 'late night detected.' : 'daytime, not late night.');
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                status(text + ' Location: ' + pos.coords.latitude.toFixed(4) + ', ' + pos.coords.longitude.toFixed(4));
+            }, () => status(text + ' Location permission denied.'));
+        } else {
+            status(text);
+        }
+    }
+</script>
+</body>
+</html>

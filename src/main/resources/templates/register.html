@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Register - SheShield</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/layout :: navbar}"></div>
+<div class="page-box card p-4">
+    <h3 class="mb-3">Create account</h3>
+    <div th:replace="~{fragments/layout :: messages}"></div>
+    <form th:action="@{/register}" method="post">
+        <input class="form-control mb-2" name="fullName" placeholder="Full name" required>
+        <input class="form-control mb-2" name="phone" placeholder="Phone (10 digits)" required>
+        <input class="form-control mb-2" type="email" name="email" placeholder="Email" required>
+        <input class="form-control mb-2" type="password" name="password" placeholder="Password (min 6)" required>
+        <input class="form-control mb-2" name="cancelPin" placeholder="Cancel PIN (4 digits)" maxlength="4" required>
+        <input class="form-control mb-3" name="duressPin" placeholder="Duress PIN (4 digits, different)" maxlength="4" required>
+        <small class="text-muted d-block mb-3">Duress PIN: use it if someone forces you to cancel an alert. It looks cancelled but a silent SOS is still sent.</small>
+        <button class="btn btn-dark w-100">Register</button>
+    </form>
+    <p class="mt-3 mb-0">Already registered? <a th:href="@{/login}">Login</a></p>
+</div>
+</body>
+</html>

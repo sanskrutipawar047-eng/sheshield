@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Navbar shown on every page -->
+<nav th:fragment="navbar" class="navbar navbar-expand navbar-dark px-3">
+    <a class="navbar-brand" th:href="@{/dashboard}"><i class="bi bi-shield-heart-fill"></i> SheShield</a>
+    <div class="navbar-nav me-auto" th:if="${session.userId != null}">
+        <a class="nav-link" th:href="@{/dashboard}"><i class="bi bi-house"></i> Home</a>
+        <a class="nav-link" th:href="@{/simulate}"><i class="bi bi-activity"></i> Simulate</a>
+        <a class="nav-link" th:href="@{/contacts}"><i class="bi bi-people"></i> Contacts</a>
+        <a class="nav-link" th:href="@{/trips}"><i class="bi bi-signpost-split"></i> Trips</a>
+        <a class="nav-link" th:href="@{/evidence}"><i class="bi bi-safe2"></i> Evidence</a>
+        <a class="nav-link" th:href="@{/reports}"><i class="bi bi-megaphone"></i> Reports</a>
+        <a class="nav-link" th:href="@{/risk-zones}"><i class="bi bi-geo-alt"></i> Risk Zones</a>
+        <a class="nav-link" th:if="${session.role == 'ADMIN'}" th:href="@{/admin}"><i class="bi bi-speedometer2"></i> Admin</a>
+    </div>
+    <div class="navbar-nav ms-auto" th:if="${session.userId != null}">
+        <span class="navbar-text me-3"><i class="bi bi-person-circle"></i> <span th:text="${session.userName}">Name</span></span>
+        <a class="nav-link" th:href="@{/logout}"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    </div>
+</nav>
+
+<!-- Success / error messages -->
+<div th:fragment="messages">
+    <div class="alert alert-success" th:if="${success}" th:text="${success}"></div>
+    <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+</div>
+
+<footer th:fragment="footer" class="text-center text-muted py-3">
+    SheShield - Predict. Detect. Respond. Support.
+</footer>
+
+</body>
+</html>
